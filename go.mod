@@ -3,7 +3,8 @@ module go-hw-test
 go 1.17
 
 require (
-	github.com/miekg/dns v1.1.23
+	// github.com/miekg/dns v1.1.23
+	github.com/miekg/dns v1.1.25
 	github.com/spf13/cobra v0.0.0-20170823073209-2df9a5318133
 )
 
