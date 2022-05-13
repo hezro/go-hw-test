@@ -1,18 +1,27 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
+	"strings"
 	"sync"
 
 	"go-hw-test/mynewpackage"
 
 	"github.com/miekg/dns"
 	"github.com/spf13/cobra"
+	"golang.org/x/net/html"
+	"golang.org/x/net/http2"
 )
 
 var NS = "ns7.dns.tds.net"
+
+const url = "https://localhost:8000"
 
 func main() {
 	cmd := &cobra.Command{
@@ -23,6 +32,13 @@ func main() {
 	}
 	fmt.Println("Calling cmd.Execute()!")
 	cmd.Execute()
+
+	parseHTML()
+
+	//testsrvpackage.runSrv()
+	test := http2.NextProtoTLS
+	fmt.Println(test)
+	testHTTP2()
 
 	conf, err := dns.ClientConfigFromFile("/etc/resolv.conf")
 	if err != nil {
@@ -58,6 +74,41 @@ func main() {
 		}
 	}
 
+}
+
+func testHTTP2() {
+
+	// Create a pool with the server certificate since it is not signed
+	// by a known CA
+	caCert, err := ioutil.ReadFile("server.crt")
+	if err != nil {
+		log.Fatalf("Reading server certificate: %s", err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	// Create TLS configuration with the certificate of the server
+	tlsConfig := &tls.Config{
+		RootCAs: caCertPool,
+	}
+	client := &http.Client{}
+	client.Transport = &http2.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
+	// Perform the request
+	resp, err := client.Get(url)
+	if err != nil {
+		log.Fatalf("Failed get: %s", err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Failed reading response body: %s", err)
+	}
+	fmt.Printf(
+		"Got response %d: %s %s\n",
+		resp.StatusCode, resp.Proto, string(body))
 }
 
 func do(t chan *dns.Msg, wg *sync.WaitGroup, c *dns.Client, m *dns.Msg, addr string) {
@@ -99,4 +150,85 @@ func addresses(conf *dns.ClientConfig, c *dns.Client, name string) (ips []string
 	}
 
 	return ips
+}
+
+// using net/html
+
+func parseHTML() {
+	webPage := "http://webcode.me/countries.html"
+	data, err := getHtmlPage(webPage)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	parseAndShow(data)
+}
+
+func getHtmlPage(webPage string) (string, error) {
+
+	resp, err := http.Get(webPage)
+
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+
+		return "", err
+	}
+
+	return string(body), nil
+}
+
+func parseAndShow(text string) {
+
+	tkn := html.NewTokenizer(strings.NewReader(text))
+
+	var isTd bool
+	var n int
+
+	//tnk, err := html.ParseFragment(strings.NewReader(text), nil)
+	tnk, err := html.Parse(strings.NewReader(text))
+	println(tnk)
+	if err != nil {
+		panic("error generating context")
+	}
+
+	for {
+
+		tt := tkn.Next()
+
+		switch {
+
+		case tt == html.ErrorToken:
+			return
+
+		case tt == html.StartTagToken:
+
+			t := tkn.Token()
+			isTd = t.Data == "td"
+
+		case tt == html.TextToken:
+
+			t := tkn.Token()
+
+			if isTd {
+
+				fmt.Printf("%s ", t.Data)
+				n++
+			}
+
+			if isTd && n%3 == 0 {
+
+				fmt.Println()
+			}
+
+			isTd = false
+		}
+	}
 }
