@@ -192,8 +192,8 @@ func parseAndShow(text string) {
 	var isTd bool
 	var n int
 
-	//tnk, err := html.ParseFragment(strings.NewReader(text), nil)
-	tnk, err := html.Parse(strings.NewReader(text))
+	tnk, err := html.ParseFragment(strings.NewReader(text), nil)
+	//tnk, err := html.Parse(strings.NewReader(text))
 	println(tnk)
 	if err != nil {
 		panic("error generating context")

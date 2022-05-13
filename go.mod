@@ -8,7 +8,8 @@ require (
 	github.com/spf13/cobra v1.4.0
 )
 
-require golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+//require golang.org/x/net v0.0.0-20190923162816-aa69164e4478
+require golang.org/x/net v0.0.0-20200513185701-a91f0712d120
 
 require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
